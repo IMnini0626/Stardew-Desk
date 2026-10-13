@@ -1,0 +1,14 @@
+# 游戏素材：只在本机从正版游戏里读取，不要提交
+game-content/
+scene/data/
+*.xnb
+*.xwb
+*.m4a
+
+# 构建产物
+*.app/
+*.zip
+
+# 系统 / 编辑器
+.DS_Store
+node_modules/
