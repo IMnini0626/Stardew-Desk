@@ -732,6 +732,7 @@ function locationLabel() {
   return autoLocation() ? '跟随时区自动' : '杭州（默认）';
 }
 function setLocation(loc) {
+  log('设置天气城市：' + JSON.stringify(loc));
   S.location = loc;
   var cur = currentLocation();
   var js = 'SDV.host.apply("location",' + JSON.stringify(cur) + ')';
@@ -776,8 +777,8 @@ function chooseCity(list) {
     pop.addItemWithTitle($((i + 1) + '. ' + label));   // numbered, so same-named places stay separate
   });
   alert.accessoryView = pop;
-  if (alert.runModal !== 1000) return null;
-  return list[pop.indexOfSelectedItem] || null;
+  if (Number(alert.runModal) === 1001) return null;
+  return list[Number(pop.indexOfSelectedItem)] || null;
 }
 function cityDialog() {
   var app = $.NSApplication.sharedApplication;
@@ -792,17 +793,22 @@ function cityDialog() {
   if (S.location && S.location.name) tf.stringValue = $(S.location.name);
   alert.accessoryView = tf;
   alert.window.initialFirstResponder = tf;
-  if (alert.runModal !== 1000) return;
-  var text = tf.stringValue.js.trim().slice(0, 40);
-  if (!text) return;
+  var resp = Number(alert.runModal);
+  var text = String(ObjC.unwrap(tf.stringValue) || '').trim().slice(0, 40);
+  log('更换城市：按钮 ' + resp + '，输入「' + text + '」');
+  if (resp === 1001 || !text) return;          // 1001 = 取消 (the second button)
   var key = text.replace(/\s+/g, '').replace(/(市|县|区|特别行政区)$/, '');
-  if (CN_CITIES[key]) { setLocation({ name: key, lat: CN_CITIES[key][0], lon: CN_CITIES[key][1] }); return; }
+  if (CN_CITIES[key]) { setLocation({ name: key, lat: CN_CITIES[key][0], lon: CN_CITIES[key][1] }); cityDone(); return; }
   var res = geocode(text);
   if (res === null) { infoAlert('没连上网络', '这个城市要联网查一下位置，请检查网络后再试。'); return; }
   if (!res.length) { infoAlert('没找到「' + text + '」', '换个写法试试：去掉「市」「县」，或者用拼音、英文。'); return; }
   var pick = res.length > 1 ? chooseCity(res) : res[0];
   if (!pick) return;
   setLocation({ name: pick.name, lat: Math.round(pick.latitude * 100) / 100, lon: Math.round(pick.longitude * 100) / 100 });
+  cityDone();
+}
+function cityDone() {
+  infoAlert('天气已切换到「' + S.location.name + '」', '日出日落马上按新城市计算，实时天气几秒后更新。\n菜单 天气 › 所在城市 里可以看到当前城市。');
 }
 
 // ---------- first-run setup ----------
