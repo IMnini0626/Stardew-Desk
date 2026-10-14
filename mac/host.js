@@ -688,11 +688,121 @@ var TZ_CITY = {
   'Australia/Sydney': [-33.87, 151.21], 'Australia/Melbourne': [-37.81, 144.96], 'Pacific/Auckland': [-36.85, 174.76],
 };
 function autoLocation() {
-  if (S.location) return S.location;      // set by an earlier version
+  if (S.location) return S.location;      // chosen in 天气 › 更换城市…
   try {
     var c = TZ_CITY[$.NSTimeZone.localTimeZone.name.js];
     return c ? { lat: c[0], lon: c[1] } : null;
   } catch (e) { return null; }
+}
+
+// ---------- the weather city, typed in by the user ----------
+// Leaf menu → 天气 → 更换城市…. Common Chinese cities are built in (no network needed);
+// anything else goes to Open-Meteo's free place-name search (no API key).
+var DEFAULT_LOC = { name: '杭州', lat: 30.27, lon: 120.15 };   // same as scene/config.js
+var CN_CITIES = {
+  '北京': [39.90, 116.41], '上海': [31.23, 121.47], '天津': [39.13, 117.20], '重庆': [29.56, 106.55],
+  '广州': [23.13, 113.26], '深圳': [22.54, 114.06], '珠海': [22.27, 113.58], '佛山': [23.02, 113.12],
+  '东莞': [23.02, 113.75], '中山': [22.52, 113.39], '惠州': [23.11, 114.42], '汕头': [23.35, 116.68],
+  '杭州': [30.27, 120.15], '宁波': [29.87, 121.55], '温州': [28.00, 120.67], '绍兴': [30.00, 120.58],
+  '嘉兴': [30.75, 120.76], '湖州': [30.89, 120.09], '金华': [29.08, 119.65], '义乌': [29.31, 120.08],
+  '台州': [28.66, 121.42], '舟山': [29.99, 122.21], '丽水': [28.45, 119.92], '衢州': [28.97, 118.87],
+  '南京': [32.06, 118.80], '苏州': [31.30, 120.59], '无锡': [31.49, 120.31], '常州': [31.81, 119.97],
+  '南通': [31.98, 120.89], '扬州': [32.39, 119.41], '镇江': [32.19, 119.43], '徐州': [34.21, 117.28],
+  '盐城': [33.35, 120.16], '泰州': [32.46, 119.92], '淮安': [33.61, 119.02], '连云港': [34.60, 119.22],
+  '合肥': [31.82, 117.23], '芜湖': [31.35, 118.43], '黄山': [29.71, 118.34], '福州': [26.07, 119.30],
+  '厦门': [24.48, 118.09], '泉州': [24.87, 118.68], '南昌': [28.68, 115.86], '九江': [29.71, 116.00],
+  '赣州': [25.83, 114.93], '景德镇': [29.27, 117.18], '济南': [36.65, 117.12], '青岛': [36.07, 120.38],
+  '烟台': [37.46, 121.45], '威海': [37.51, 122.12], '潍坊': [36.71, 119.16], '临沂': [35.10, 118.36],
+  '淄博': [36.81, 118.05], '郑州': [34.75, 113.62], '洛阳': [34.62, 112.45], '武汉': [30.59, 114.31],
+  '宜昌': [30.69, 111.29], '襄阳': [32.01, 112.12], '长沙': [28.23, 112.94], '株洲': [27.83, 113.13],
+  '张家界': [29.12, 110.48], '南宁': [22.82, 108.37], '桂林': [25.27, 110.29], '柳州': [24.33, 109.41],
+  '海口': [20.04, 110.20], '三亚': [18.25, 109.51], '成都': [30.57, 104.07], '绵阳': [31.47, 104.68],
+  '贵阳': [26.65, 106.63], '遵义': [27.73, 106.93], '昆明': [25.04, 102.71], '大理': [25.61, 100.27],
+  '丽江': [26.86, 100.23], '拉萨': [29.65, 91.12], '西安': [34.34, 108.94], '兰州': [36.06, 103.83],
+  '西宁': [36.62, 101.78], '银川': [38.49, 106.23], '乌鲁木齐': [43.83, 87.62], '喀什': [39.47, 75.99],
+  '伊宁': [43.92, 81.32], '阿勒泰': [47.84, 88.14], '呼和浩特': [40.84, 111.75], '包头': [40.66, 109.84],
+  '石家庄': [38.04, 114.51], '保定': [38.87, 115.46], '唐山': [39.63, 118.18], '秦皇岛': [39.94, 119.60],
+  '太原': [37.87, 112.55], '沈阳': [41.81, 123.43], '大连': [38.91, 121.61], '长春': [43.82, 125.32],
+  '吉林': [43.84, 126.55], '延吉': [42.89, 129.51], '哈尔滨': [45.80, 126.53], '香港': [22.32, 114.17],
+  '澳门': [22.20, 113.55], '台北': [25.03, 121.56], '高雄': [22.63, 120.30],
+};
+function currentLocation() { return autoLocation() || DEFAULT_LOC; }
+function locationLabel() {
+  if (S.location && S.location.name) return S.location.name;
+  return autoLocation() ? '跟随时区自动' : '杭州（默认）';
+}
+function setLocation(loc) {
+  S.location = loc;
+  var cur = currentLocation();
+  var js = 'SDV.host.apply("location",' + JSON.stringify(cur) + ')';
+  callAll(js);
+  editorCall(js);
+  weather.lat = cur.lat; weather.lon = cur.lon;
+  weather.configured = true;
+  weather.failures = 0;
+  weather.lastAttempt = 0;           // fetch the new city's weather right away
+  weatherTick();
+  log('天气城市：' + (loc ? loc.name + ' ' + loc.lat + ',' + loc.lon : '跟随时区'));
+}
+function infoAlert(title, text) {
+  var alert = $.NSAlert.alloc.init;
+  alert.messageText = $(title);
+  alert.informativeText = $(text);
+  alert.addButtonWithTitle($('好'));
+  alert.runModal;
+}
+// Open-Meteo place-name search. Returns a list, or null when the network failed.
+function geocode(name) {
+  var tmp = $.NSTemporaryDirectory().js + 'stardewdesk-geo.json';
+  fm.removeItemAtPathError($(tmp), null);
+  var url = 'https://geocoding-api.open-meteo.com/v1/search?count=8&language=zh&format=json&name=' + encodeURIComponent(name);
+  var t = $.NSTask.alloc.init;
+  t.launchPath = '/usr/bin/curl';
+  t.arguments = $(['-sS', '-m', '10', '-o', tmp, url]);
+  t.launch;
+  t.waitUntilExit;
+  if (t.terminationStatus !== 0) return null;
+  var text = $.NSString.stringWithContentsOfFileEncodingError(tmp, $.NSUTF8StringEncoding, null);
+  try { return JSON.parse(text.js).results || []; } catch (e) { return null; }
+}
+function chooseCity(list) {
+  var alert = $.NSAlert.alloc.init;
+  alert.messageText = $('找到好几个，选一个');
+  alert.addButtonWithTitle($('确定'));
+  alert.addButtonWithTitle($('取消'));
+  var pop = $.NSPopUpButton.alloc.initWithFramePullsDown($.NSMakeRect(0, 0, 320, 26), false);
+  list.forEach(function (r, i) {
+    var label = [r.name, r.admin1, r.country].filter(function (x) { return x; }).join(' · ');
+    pop.addItemWithTitle($((i + 1) + '. ' + label));   // numbered, so same-named places stay separate
+  });
+  alert.accessoryView = pop;
+  if (alert.runModal !== 1000) return null;
+  return list[pop.indexOfSelectedItem] || null;
+}
+function cityDialog() {
+  var app = $.NSApplication.sharedApplication;
+  app.activateIgnoringOtherApps(true);
+  var alert = $.NSAlert.alloc.init;
+  alert.messageText = $('天气跟着哪个城市？');
+  alert.informativeText = $('输入城市名，比如：北京、苏州、成都。\n国外城市也可以用英文，比如 Tokyo、London。');
+  alert.addButtonWithTitle($('确定'));
+  alert.addButtonWithTitle($('取消'));
+  var tf = $.NSTextField.alloc.initWithFrame($.NSMakeRect(0, 0, 280, 24));
+  tf.placeholderString = $('城市名');
+  if (S.location && S.location.name) tf.stringValue = $(S.location.name);
+  alert.accessoryView = tf;
+  alert.window.initialFirstResponder = tf;
+  if (alert.runModal !== 1000) return;
+  var text = tf.stringValue.js.trim().slice(0, 40);
+  if (!text) return;
+  var key = text.replace(/\s+/g, '').replace(/(市|县|区|特别行政区)$/, '');
+  if (CN_CITIES[key]) { setLocation({ name: key, lat: CN_CITIES[key][0], lon: CN_CITIES[key][1] }); return; }
+  var res = geocode(text);
+  if (res === null) { infoAlert('没连上网络', '这个城市要联网查一下位置，请检查网络后再试。'); return; }
+  if (!res.length) { infoAlert('没找到「' + text + '」', '换个写法试试：去掉「市」「县」，或者用拼音、英文。'); return; }
+  var pick = res.length > 1 ? chooseCity(res) : res[0];
+  if (!pick) return;
+  setLocation({ name: pick.name, lat: Math.round(pick.latitude * 100) / 100, lon: Math.round(pick.longitude * 100) / 100 });
 }
 
 // ---------- first-run setup ----------
@@ -1171,8 +1281,12 @@ function addSubmenu(menu, title, prefix, options, selected) {
 function rebuildMenu(menu) {
   menu.removeAllItems;
   addSubmenu(menu, '季节', 'season', [['auto', '跟随真实月份'], ['spring', '春'], ['summer', '夏'], ['fall', '秋'], ['winter', '冬']], S.season);
-  addSubmenu(menu, '天气', 'weather', [['live', '实时天气'], ['sunny', '晴'], ['cloudy', '阴'], ['rain', '雨'], ['storm', '雷雨'],
+  var ws = addSubmenu(menu, '天气', 'weather', [['live', '实时天气'], ['sunny', '晴'], ['cloudy', '阴'], ['rain', '雨'], ['storm', '雷雨'],
     ['snow', '雪'], ['fog', '雾'], ['windy', '大风']], S.weather);
+  ws.addItem($.NSMenuItem.separatorItem);
+  addItem(ws, '所在城市：' + locationLabel());
+  addItem(ws, '更换城市…', 'menuAction:', 'city:set');
+  if (S.location) addItem(ws, '改回跟随时区自动', 'menuAction:', 'city:auto');
   addSubmenu(menu, '宠物', 'pet', PETS, S.pet);
 
   var sv = addSubmenu(menu, '屏保', 'saver', [['0', '关闭'], ['3', '闲置 3 分钟后'], ['5', '闲置 5 分钟后'], ['10', '闲置 10 分钟后'], ['15', '闲置 15 分钟后']], String(S.saverMinutes));
@@ -1229,6 +1343,7 @@ function menuAction(sender) {
     editorCall('SDV.host.apply(' + JSON.stringify(kind) + ',' + JSON.stringify(val) + ')');
   }
   else if (kind === 'editor') { openEditor(); }
+  else if (kind === 'city') { if (val === 'auto') setLocation(null); else cityDialog(); }
   else if (kind === 'realtime') { applySetting('time', null); editorCall('SDV.host.apply("time",null)'); }
   else if (kind === 'quality') { S.quality = val; applyPolicy(); }
   else if (kind === 'saver') { S.saverMinutes = Number(val); }
