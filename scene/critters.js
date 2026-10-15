@@ -271,7 +271,8 @@ SDV.critters = (() => {
       } else if (c.kind === 'bird' && c.state !== 'ground') {
         const f = c.base + 6 + [0, 1, 2, 1][Math.floor(c.t * 10) % 4];
         const [sx, sy] = f32(f);
-        draw(g, img, sx, sy, 32, 32, Math.round(c.x) - 16, Math.round(c.y - c.z) - 28, c.flip);
+        // The airborne bird frames face left by default; reverse the ground-facing flip.
+        draw(g, img, sx, sy, 32, 32, Math.round(c.x) - 16, Math.round(c.y - c.z) - 28, !c.flip);
       }
     }
   }
